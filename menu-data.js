@@ -331,6 +331,11 @@ window.DEFAULT_MENU_DATA = [
       },
 
       {
+        name:"Ayran",
+        image:"image/ayran.webp"
+      },
+
+      {
         name:"Sade Soda",
         image:"image/soda.webp"
       },
