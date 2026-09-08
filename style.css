@@ -297,3 +297,16 @@ button{font:inherit;cursor:pointer}
   transition:.2s ease;
 }
 .back-button:hover{border-color:rgba(255,106,26,.5);color:#ff7a32;background:rgba(255,106,26,.08)}
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-logo {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+  display: block;
+}
