@@ -173,12 +173,18 @@ button{font:inherit;cursor:pointer}
 .product-info p{margin:0;color:#969f99;font-size:8px;line-height:1.45}
 .product-info .description{font-size:9px;text-transform:none;letter-spacing:0;color:#aeb5b0}
 .price{
-  align-self:flex-start;margin-top:5px;
+  align-self:flex-start;
+  margin-top:5px;
+
   color:var(--orange2);
   background:rgba(255,106,26,.12);
   border:1px solid rgba(255,106,26,.2);
-  padding:5px 7px;border-radius:999px;
-  font-size:8px;font-weight:800;
+
+  padding:8px 12px;
+  border-radius:999px;
+
+  font-size:14px;
+  font-weight:800;
 }
 
 .quote{
