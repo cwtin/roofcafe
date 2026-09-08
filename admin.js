@@ -97,6 +97,276 @@ function defaults() {
 }
 
 
+function normalizeKey(value = "") {
+
+  return String(value)
+    .trim()
+    .toLocaleLowerCase("tr-TR");
+
+}
+
+
+function sameMenuItem(remoteItem, localItem) {
+
+  if(!remoteItem || !localItem) {
+    return false;
+  }
+
+  const remoteImage =
+    normalizeKey(remoteItem.image || "");
+
+  const localImage =
+    normalizeKey(localItem.image || "");
+
+  if(
+    remoteImage &&
+    localImage &&
+    remoteImage === localImage
+  ) {
+    return true;
+  }
+
+  return normalizeKey(remoteItem.name) ===
+    normalizeKey(localItem.name);
+
+}
+
+
+function prepareNewItem(item) {
+
+  const copy = clone(item);
+
+  if(copy.active === undefined) {
+    copy.active = true;
+  }
+
+  if(
+    copy.products &&
+    Array.isArray(copy.products)
+  ) {
+    copy.products = copy.products.map(prepareNewItem);
+  }
+
+  if(
+    copy.subcategories &&
+    Array.isArray(copy.subcategories)
+  ) {
+    copy.subcategories = copy.subcategories.map(prepareNewItem);
+  }
+
+  if(
+    !copy.products &&
+    !copy.subcategories &&
+    copy.price === undefined
+  ) {
+    copy.price = "BOŞ";
+  }
+
+  return copy;
+
+}
+
+
+function buildMissingOnlySync(remoteMenu, localMenu) {
+
+  const merged = clone(
+    Array.isArray(remoteMenu)
+      ? remoteMenu
+      : []
+  );
+
+  const updates = {};
+  let addedProducts = 0;
+  let addedSubcategories = 0;
+  let addedCategories = 0;
+
+
+  localMenu.forEach(localCategory => {
+
+    let ci = merged.findIndex(
+      remoteCategory =>
+        sameMenuItem(
+          remoteCategory,
+          localCategory
+        )
+    );
+
+
+    if(ci === -1) {
+
+      ci = merged.length;
+
+      const newCategory =
+        prepareNewItem(localCategory);
+
+      merged.push(newCategory);
+
+      updates[`menu/${ci}`] =
+        newCategory;
+
+      addedCategories += 1;
+
+      return;
+
+    }
+
+
+    const remoteCategory =
+      merged[ci];
+
+
+    if(
+      Array.isArray(localCategory.products)
+    ) {
+
+      if(!Array.isArray(remoteCategory.products)) {
+        remoteCategory.products = [];
+      }
+
+
+      localCategory.products.forEach(localProduct => {
+
+        const exists =
+          remoteCategory.products.some(
+            remoteProduct =>
+              sameMenuItem(
+                remoteProduct,
+                localProduct
+              )
+          );
+
+
+        if(!exists) {
+
+          const pi =
+            remoteCategory.products.length;
+
+          const newProduct =
+            prepareNewItem(localProduct);
+
+          remoteCategory.products.push(
+            newProduct
+          );
+
+          updates[
+            `menu/${ci}/products/${pi}`
+          ] = newProduct;
+
+          addedProducts += 1;
+
+        }
+
+      });
+
+    }
+
+
+    if(
+      Array.isArray(localCategory.subcategories)
+    ) {
+
+      if(!Array.isArray(remoteCategory.subcategories)) {
+        remoteCategory.subcategories = [];
+      }
+
+
+      localCategory.subcategories.forEach(localSubcategory => {
+
+        let si =
+          remoteCategory.subcategories.findIndex(
+            remoteSubcategory =>
+              sameMenuItem(
+                remoteSubcategory,
+                localSubcategory
+              )
+          );
+
+
+        if(si === -1) {
+
+          si =
+            remoteCategory.subcategories.length;
+
+          const newSubcategory =
+            prepareNewItem(localSubcategory);
+
+          remoteCategory.subcategories.push(
+            newSubcategory
+          );
+
+          updates[
+            `menu/${ci}/subcategories/${si}`
+          ] = newSubcategory;
+
+          addedSubcategories += 1;
+
+          return;
+
+        }
+
+
+        const remoteSubcategory =
+          remoteCategory.subcategories[si];
+
+        if(!Array.isArray(remoteSubcategory.products)) {
+          remoteSubcategory.products = [];
+        }
+
+
+        (
+          localSubcategory.products || []
+        ).forEach(localProduct => {
+
+          const exists =
+            remoteSubcategory.products.some(
+              remoteProduct =>
+                sameMenuItem(
+                  remoteProduct,
+                  localProduct
+                )
+            );
+
+
+          if(!exists) {
+
+            const pi =
+              remoteSubcategory.products.length;
+
+            const newProduct =
+              prepareNewItem(localProduct);
+
+            remoteSubcategory.products.push(
+              newProduct
+            );
+
+            updates[
+              `menu/${ci}/subcategories/${si}/products/${pi}`
+            ] = newProduct;
+
+            addedProducts += 1;
+
+          }
+
+        });
+
+      });
+
+    }
+
+  });
+
+
+  return {
+    merged,
+    updates,
+    addedProducts,
+    addedSubcategories,
+    addedCategories
+  };
+
+}
+
+
 function esc(s = "") {
 
   return String(s).replace(
@@ -501,6 +771,27 @@ function prodHTML(
       data-pi="${pi}"
     >
 
+      <div class="product-order-controls">
+
+        <button
+          type="button"
+          class="order-btn"
+          data-move="up"
+          title="Yukarı taşı"
+          aria-label="Ürünü yukarı taşı"
+        >↑</button>
+
+        <button
+          type="button"
+          class="order-btn"
+          data-move="down"
+          title="Aşağı taşı"
+          aria-label="Ürünü aşağı taşı"
+        >↓</button>
+
+      </div>
+
+
       <div
         class="product-main"
       >
@@ -647,6 +938,66 @@ function bind() {
             ? el.checked
 
             : el.value;
+
+      };
+
+    });
+
+
+  editor
+    .querySelectorAll(
+      "[data-move]"
+    )
+    .forEach(btn => {
+
+      btn.onclick = () => {
+
+        const row =
+          btn.closest(
+            "[data-pi]"
+          );
+
+        const ci =
+          +row.dataset.ci;
+
+        const pi =
+          +row.dataset.pi;
+
+        const si =
+          row.dataset.si;
+
+        const products =
+          si === ""
+
+            ? adminMenu[ci].products
+
+            : adminMenu[ci]
+                .subcategories[+si]
+                .products;
+
+        const target =
+          btn.dataset.move === "up"
+
+            ? pi - 1
+
+            : pi + 1;
+
+        if(
+          target < 0 ||
+          target >= products.length
+        ) {
+          return;
+        }
+
+        [
+          products[pi],
+          products[target]
+        ] = [
+          products[target],
+          products[pi]
+        ];
+
+        render();
 
       };
 
@@ -893,8 +1244,67 @@ roofAuth
           )
         ) {
 
-          adminMenu =
+          const remoteMenu =
             snap.val();
+
+          const syncResult =
+            buildMissingOnlySync(
+              remoteMenu,
+              defaults()
+            );
+
+          const updatePaths =
+            Object.keys(
+              syncResult.updates
+            );
+
+          if(updatePaths.length) {
+
+            await roofDb
+              .ref()
+              .update(
+                syncResult.updates
+              );
+
+            adminMenu =
+              syncResult.merged;
+
+            const addedText = [];
+
+            if(syncResult.addedProducts) {
+              addedText.push(
+                syncResult.addedProducts +
+                " yeni ürün"
+              );
+            }
+
+            if(syncResult.addedSubcategories) {
+              addedText.push(
+                syncResult.addedSubcategories +
+                " yeni alt kategori"
+              );
+            }
+
+            if(syncResult.addedCategories) {
+              addedText.push(
+                syncResult.addedCategories +
+                " yeni kategori"
+              );
+            }
+
+            panelMsg.textContent =
+              "✓ Koddan eklenen " +
+              addedText.join(", ") +
+              " Firebase’e eklendi. Mevcut veriler değiştirilmedi.";
+
+          }
+
+          else {
+
+            adminMenu =
+              remoteMenu;
+
+          }
 
         }
 
