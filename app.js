@@ -345,6 +345,25 @@ document.getElementById("homeButton").onclick=renderMainCategories;
 
 document.getElementById("menuButton").onclick=renderMainCategories;
 
+document.getElementById("locationButton").onclick=()=>{
+  window.open(
+    "https://www.google.com/maps/place//data=!4m2!3m1!1s0x14c85fd3c7f881c9:0x52d4a3ada566438d?sa=X&ved=1t:8290&ictx=111",
+    "_blank"
+  );
+};
+
+document.getElementById("instagramButton").onclick=()=>{
+  window.open(
+    "https://www.instagram.com/roof.lounge.gediz/",
+    "_blank"
+  );
+};
+
+const bottomLogo=document.querySelector(".bottom-logo");
+if(bottomLogo){
+  bottomLogo.onclick=renderMainCategories;
+}
+
 document.getElementById("menuToggle").onclick=renderMainCategories;
 
 document.getElementById("searchButton").onclick=()=>{
